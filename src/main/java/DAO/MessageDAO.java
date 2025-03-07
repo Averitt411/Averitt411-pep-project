@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,9 +37,7 @@ public class MessageDAO {
         try{
             String sql = "select * from message where message_id=?;";
             PreparedStatement ps = connection.prepareStatement(sql);
-
             ps.setInt(1,message_id);
-
             ResultSet rs = ps.executeQuery();
             while(rs.next()){
                 Message message = new Message(rs.getInt("message_id"), 
@@ -55,13 +54,13 @@ public class MessageDAO {
     }
 
     public Message insertMessage(Message message){
-        if(message.getMessage_text()==null || message.getMessage_text().length()>255 || userExists(message.getPosted_by()) == false){
+        if(message.getMessage_text()==null || message.getMessage_text().length()>255 || userExists(message.getPosted_by()) == false || message.message_text.isEmpty()){
             return null;
         }else{
             Connection connection = ConnectionUtil.getConnection();
             try{
-                String sql = "insert into message (posted_by, message_text, time_posted_epoch) values (?, ?, ?)";
-                PreparedStatement ps = connection.prepareStatement(sql);
+                String sql = "insert into message (posted_by, message_text, time_posted_epoch) values (?, ?, ?);";
+                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
                 ps.setInt(1,message.getPosted_by());
                 ps.setString(2,message.getMessage_text());
@@ -82,7 +81,9 @@ public class MessageDAO {
 
     public Message deleteMessageById(int message_id){
         Message messageToDelete = getMessageById(message_id);
-        if(messageToDelete!=null){
+        if(messageToDelete==null || messageToDelete.getMessage_text().isEmpty()){
+            return null;
+        }else{
             Connection connection = ConnectionUtil.getConnection();
             try{
                 String sql = "delete from message where message_id=?;";
@@ -97,7 +98,7 @@ public class MessageDAO {
             }
             return messageToDelete;
         }
-        return null;
+        
     }
 
     public List<Message> getAllMessagesByUser(int posted_by){
@@ -124,7 +125,7 @@ public class MessageDAO {
     }
 
     public Message updateMessageById(int message_id, String message_text){
-        if(message_text==null || message_text.length()>255 || getMessageById(message_id)==null){
+        if(message_text==null || message_text.length()>255 || getMessageById(message_id)==null || message_text.isEmpty() || message_text.isBlank()){
             return null;
         }else{
             Connection connection = ConnectionUtil.getConnection();
